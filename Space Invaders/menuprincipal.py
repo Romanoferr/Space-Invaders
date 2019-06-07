@@ -3,7 +3,13 @@ from PPlay.sprite import *
 from PPlay.gameimage import *
 from PPlay.collision import *
 from lugarmenu import lugar
-'''Implementacoes de colisoes otimizacao:
+
+'''Implementacoes de colisoes otimizacao:'''
+''''
+	Implementacao de ranking, cada monstro vale uma certa quantidade de pontos
+	a pontuacao que cada monstro da diminui em relacao ao tempo
+	
+	Implementar nova fase quando monstros morrem
 '''
 
 
@@ -37,13 +43,52 @@ over.set_position(janela.width/2 - over.width/2, janela.height/2 - over.height/2
 listatiros = []
 matriz = []
 delay = 0
-dificult = 5
+dificult = 3
 sentido = 1
 lose = 0
 gamestate = 0
-matriz_x = 5
+matriz_x = 4
 matriz_y = 3
 fps = fpsatual = delayfps = 0
+tempo = 1
+pontos = 0
+pontobase = 10
+pulobase = 35
+
+
+
+
+def novonivel():
+	global matriz, matriz_x, matriz_y, tempo, dificult, pontobase, pulobase
+	vivo = 0
+	for i in range(len(matriz)):
+		if len(matriz[i]) != 0:
+			vivo = 1
+			break
+	# atualiza valores para proxima fase e cria nova matriz
+	if vivo == 0:
+		pulobase += 3
+		pontobase += 2
+		tempo = 1
+		matriz_y += 1
+		matriz_x += 1
+		dificult += 1
+
+		if matriz_x >= 8:
+			matriz_x = 8
+		if matriz_y >= 6:
+			matriz_y = 6
+		if dificult >= 6:
+			dificult = 6
+		if pulobase >= 60:
+			pulobase = 60
+
+		matrizmonstros(matriz_x, matriz_y-1)
+
+
+def pontuacao():
+	global pontos, tempo
+	pontos += int(50/tempo) + pontobase
 
 
 def gameover():
@@ -66,11 +111,14 @@ def colisao():
 	for tiro in range(len(listatiros)):
 		for mxx in range(len(matriz)):
 			for myy in range(len(matriz[mxx])):
+
 				if matriz[mxx][myy].collided(nave):
 					lose = 1
+
 				if listatiros[tiro].collided(matriz[mxx][myy]):
 					matriz[mxx].remove(matriz[mxx][myy])
 					listatiros.remove(listatiros[tiro])
+					pontuacao()
 					return
 
 
@@ -86,10 +134,10 @@ def movenave():
 	vel_nave = 560 * janela.delta_time()
 	if teclado.key_pressed("RIGHT"):
 		if nave.x + nave.width < janela.width:
-			nave.x += vel_nave
+			nave.move_x(vel_nave)
 	if teclado.key_pressed("LEFT"):
 		if nave.x > 0:
-			nave.x -= vel_nave
+			nave.move_x(-vel_nave)
 
 	if teclado.key_pressed("SPACE") and delay*dificult >= 1:
 		novotiro()
@@ -112,7 +160,7 @@ def matrizmonstros(a, b):
 		linha = []
 		for j in range(b):
 			enemy = Sprite("img/enemy.png")
-			enemy.set_position(i * 2 * enemy.width, (j * 2 * enemy.height) + 10)
+			enemy.set_position(i * 2 * enemy.width, (j * 2 * enemy.height) + 30)
 			linha.append(enemy)
 		matriz.append(linha)
 
@@ -120,7 +168,7 @@ def matrizmonstros(a, b):
 def moveenemy():
 	global matriz, sentido, lose
 	# move a matriz de monstros horizontalmente
-	vel_enemy = 130 * janela.delta_time()
+	vel_enemy = 120 * janela.delta_time()
 	movimento = vel_enemy * sentido
 	for linha in range(len(matriz)):
 		for coluna in range(len(matriz[linha])):
@@ -133,11 +181,11 @@ def moveenemy():
 				sentido *= -1
 				matriz[linha][coluna].move_x(5 * sentido)
 
-				# Move verticalmente a matriz de monstros
+				# Move verticalmente a matriz de monstros pensar
 				for abc in range(matriz_x * matriz_y):
 					for l in range(len(matriz)):
 						for c in range(len(matriz[l])):
-							matriz[l][c].move_y(35)
+							matriz[l][c].move_y(pulobase)
 					return
 
 
@@ -158,6 +206,7 @@ def telajogo():
 		desenhaenemy()
 		colisao()
 		ifps()
+		novonivel()
 		nave.draw()
 	else:
 		gameover()
@@ -212,12 +261,13 @@ while True:
 
 	delay += janela.delta_time()
 	delayfps += janela.delta_time()
-
+	tempo += janela.delta_time()
 	if gamestate == 0:
 		menu()
 	if gamestate == 1:
 		telajogo()
 		janela.draw_text(str(fpsatual), 740, 3, size=12, color=(255, 255, 255), bold=True)
+		janela.draw_text('Pontuação: ' + str(pontos), 700, janela.height-15, size=12, color=(255, 255, 255), bold=True)
 	if gamestate == 2:
 		teladificuldade()
 	if gamestate == 3:
