@@ -3,13 +3,7 @@ from PPlay.sprite import *
 from PPlay.gameimage import *
 import random
 import numpy as np
-'''Implementacoes de colisoes otimizacao:'''
-''''
-	Implementacao de ranking, cada monstro vale uma certa quantidade de pontos
-	a pontuacao que cada monstro da diminui em relacao ao tempo
 
-	Implementar nova fase quando monstros morrem
-'''
 
 janela = Window(800, 600)
 janela.set_title("Space invaders")
@@ -33,8 +27,9 @@ botao_quithover = Sprite("img/quithover.png")
 
 nave = Sprite("img/spaceship.png")
 
-fundo = GameImage("img/fundo.png")
+fundo = GameImage("img/backg.jpg")
 over = Sprite("img/gameover.jpg")
+life = Sprite("img/life.png.png")
 mouse = Window.get_mouse()
 teclado = Window.get_keyboard()
 
@@ -61,12 +56,15 @@ hardhover.set_position(hard.x, hard.y)
 
 nave.set_position(janela.width / 2 - nave.width / 2, janela.height - nave.height - 10)
 over.set_position(janela.width / 2 - over.width / 2, janela.height / 2 - over.height / 2)
+life.set_position(0, 565)
 
 # inicializacoes de variaveis
 GAMESPEED = 1
 listatiros = []
 listatiros_enemy = []
 matriz = []
+listavida3 = [0, 0, 0]
+listavida2 = [0, 0]
 delay = 0
 dificult = 3
 sentido = 1
@@ -82,20 +80,41 @@ pulobase = 35
 reloadmonstro = 2
 tempomonstro = 0
 tempodano = 0
-vida = 5
-bal1 = 1.5
-bal2 = 0.5
+vidas = 3
 basenave = 560
 enemybase = 120
 
+for a in range(3):
+	listavida3[a] = Sprite("img/life.png.png")
+	listavida3[a].set_position(a * listavida3[a].width, 565)
+
+for b in range(2):
+	listavida2[b] = Sprite("img/life.png.png")
+	listavida2[b].set_position(b * listavida2[b].width, 565)
+
+
+def vida():
+	global vidas, listavida3, listavida2
+
+	if vidas == 3:
+		for lifes in listavida3:
+			lifes.draw()
+
+	elif vidas == 2:
+		for k in range(2):
+			listavida2[k].draw()
+
+	elif vidas == 1:
+		life.draw()
+
 
 def colisaonave():
-	global listatiros_enemy, tempodano, lose, vida
+	global listatiros_enemy, tempodano, lose, vidas
 	for tiro in listatiros_enemy:
 		if nave.collided(tiro):
 			listatiros_enemy.remove(tiro)
-			vida -= 0
-			if vida == 0:
+			vidas -= 0
+			if vidas == 0:
 				lose = 1
 
 
@@ -135,7 +154,7 @@ def novotiro_enemy():
 
 
 def novonivel():
-	global matriz, matriz_x, matriz_y, tempo, dificult, pontobase, pulobase, reloadmonstro, bal1, bal2, basenave, enemybase
+	global matriz, matriz_x, matriz_y, tempo, dificult, pontobase, pulobase, reloadmonstro, basenave, enemybase
 	vivo = 0
 	for i in range(len(matriz)):
 		if len(matriz[i]) != 0:
@@ -156,8 +175,8 @@ def novonivel():
 
 		if matriz_x >= 9:
 			matriz_x = 9
-		if matriz_y >= 6:
-			matriz_y = 6
+		if matriz_y >= 7:
+			matriz_y = 7
 		if dificult >= 6.5:
 			dificult = 6.5
 		if pulobase >= 58:
@@ -200,6 +219,7 @@ def colisao():
 
 				if matriz[mxx][myy].collided(nave):
 					lose = 1
+					return
 
 				if listatiros[tiro].collided(matriz[mxx][myy]):
 					matriz[mxx].remove(matriz[mxx][myy])
@@ -247,7 +267,7 @@ def matrizmonstros(a, b):
 		linha = []
 		for j in range(b):
 			enemy = Sprite("img/newenemy.png")
-			enemy.set_position(i * 2 * enemy.width, (j * 2 * enemy.height) + 30)
+			enemy.set_position(i * 1.7 * enemy.width, (j * 1.7 * enemy.height))
 			linha.append(enemy)
 		matriz.append(linha)
 
@@ -296,6 +316,7 @@ def telajogo():
 		desenhaenemy()
 		colisao()
 		ifps()
+		vida()
 		novotiro_enemy()
 		desenhatiro_enemy()
 		colisaonave()
@@ -373,7 +394,6 @@ def menu():
 matrizmonstros(matriz_x, matriz_y)
 
 while True:
-	print(tempomonstro, reloadmonstro)
 	delay += janela.delta_time()
 	delayfps += janela.delta_time()
 	tempo += janela.delta_time()
