@@ -1,11 +1,8 @@
 from PPlay.window import *
 from PPlay.sprite import *
 from PPlay.gameimage import *
-from PPlay.collision import *
-from lugarmenu import lugar
 import random
-from numpy import shape
-
+import numpy as np
 '''Implementacoes de colisoes otimizacao:'''
 ''''
 	Implementacao de ranking, cada monstro vale uma certa quantidade de pontos
@@ -21,6 +18,12 @@ botao_playhover = Sprite("img/playhover.png")
 
 botao_dificuldade = Sprite("img/dificuldade.png")
 botao_dificuldadehover = Sprite("img/dificuldadehover.png")
+easy = Sprite("img/easy.png")
+easyhover = Sprite("img/easyhover.png")
+medium = Sprite("img/medium.png")
+mediumhover = Sprite("img/mediumhover.png")
+hard = Sprite("img/hard.png")
+hardhover = Sprite("img/hardhover.png")
 
 botao_rank = Sprite("img/rank.png")
 botao_rankhover = Sprite("img/rankhover.png")
@@ -35,13 +38,32 @@ over = Sprite("img/gameover.jpg")
 mouse = Window.get_mouse()
 teclado = Window.get_keyboard()
 
-lugar(janela, botao_play, botao_playhover, botao_dificuldade, botao_dificuldadehover, botao_rank, botao_rankhover, botao_quit,
-	  botao_quithover)
+botao_play.set_position((janela.width / 2) - (botao_play.width / 2), (janela.height / 4) - botao_play.height)
+botao_playhover.set_position(botao_play.x, botao_play.y)
+
+botao_dificuldade.set_position((janela.width / 2) - (botao_dificuldade.width / 2), (janela.height / 4) - botao_dificuldade.height + 100)
+botao_dificuldadehover.set_position(botao_dificuldade.x, botao_dificuldade.y)
+
+botao_rank.set_position((janela.width / 2) - (botao_rank.width / 2), (janela.height / 4) - botao_rank.height + 200)
+botao_rankhover.set_position(botao_rank.x, botao_rank.y)
+
+botao_quit.set_position((janela.width / 2) - (botao_quit.width / 2), (janela.height / 4) - botao_quit.height + 300)
+botao_quithover.set_position(botao_quit.x, botao_quit.y)
+
+easy.set_position((janela.width / 2) - (easy.width / 2), (janela.height / 4) - easy.height + 50)
+easyhover.set_position(easy.x, easy.y)
+
+medium.set_position((janela.width / 2) - (medium.width / 2), (janela.height / 4) - medium.height + 200)
+mediumhover.set_position(medium.x, medium.y)
+
+hard.set_position((janela.width / 2) - (hard.width / 2), (janela.height / 4) - hard.height + 350)
+hardhover.set_position(hard.x, hard.y)
 
 nave.set_position(janela.width / 2 - nave.width / 2, janela.height - nave.height - 10)
 over.set_position(janela.width / 2 - over.width / 2, janela.height / 2 - over.height / 2)
 
 # inicializacoes de variaveis
+GAMESPEED = 1
 listatiros = []
 listatiros_enemy = []
 matriz = []
@@ -52,7 +74,7 @@ lose = 0
 gamestate = 0
 matriz_x = 4
 matriz_y = 3
-fps = fpsatual = delayfps = 0
+fps = fpsatual = delayfps = count = 0
 tempo = 1
 pontos = 0
 pontobase = 10
@@ -60,7 +82,7 @@ pulobase = 35
 reloadmonstro = 2
 tempomonstro = 0
 tempodano = 0
-vida = 3
+vida = 5
 bal1 = 1.5
 bal2 = 0.5
 basenave = 560
@@ -69,10 +91,10 @@ enemybase = 120
 
 def colisaonave():
 	global listatiros_enemy, tempodano, lose, vida
-	for tiro in range(len(listatiros_enemy)):
-		if nave.collided(listatiros_enemy[tiro]):
-			listatiros_enemy.remove(listatiros_enemy[tiro])
-			vida -= 1
+	for tiro in listatiros_enemy:
+		if nave.collided(tiro):
+			listatiros_enemy.remove(tiro)
+			vida -= 0
 			if vida == 0:
 				lose = 1
 
@@ -90,12 +112,12 @@ def desenhatiro_enemy():
 
 
 def novotiro_enemy():
-	global tempomonstro, reloadmonstro, listatiros_enemy, matriz
-	if reloadmonstro <= tempomonstro:
-		reloadmonstro = (random.random() * bal1) + bal2
-		print(reloadmonstro)
+	global tempomonstro, reloadmonstro, listatiros_enemy, matriz, tiro_enemy, count
+	if tempomonstro >= reloadmonstro:
+		reloadmonstro = (random.random() * 1.5)
+
 		randx = random.randint(0, len(matriz) - 1)
-		randy = random.randint(0, matriz_y - 1)
+		randy = random.randint(0, len(np.shape(matriz)) - 1)
 
 		tiro_enemy = Sprite("img/newtiroenemy.png")
 		tempomonstro = 0
@@ -103,16 +125,18 @@ def novotiro_enemy():
 		try:
 			tiro_enemy.set_position(matriz[randx][randy].x + matriz[randx][randy].width/2, matriz[randx][randy].y + matriz[randx][randy].height)
 			listatiros_enemy.append(tiro_enemy)
-
 		except IndexError:
-			tempomonstro = 10
-			novotiro_enemy()
+			count += 1
+			tempomonstro = 3
+			if count <= 900:
+				novotiro_enemy()
+			else:
+				pass
 
 
 def novonivel():
 	global matriz, matriz_x, matriz_y, tempo, dificult, pontobase, pulobase, reloadmonstro, bal1, bal2, basenave, enemybase
 	vivo = 0
-	print(basenave, enemybase, pulobase)
 	for i in range(len(matriz)):
 		if len(matriz[i]) != 0:
 			vivo = 1
@@ -120,15 +144,13 @@ def novonivel():
 
 	# atualiza valores para proxima fase e cria nova matriz
 	if vivo == 0:
-		pulobase += 3
-		pontobase += 2
+		pulobase += 2.5
+		pontobase += 4
 		tempo = 1
 		matriz_y += 1
 		matriz_x += 1
 		dificult += 1
 		reloadmonstro -= 0.1
-		bal1 -= 0.05
-		bal2 -= 0.05
 		basenave += 10
 		enemybase += 5
 
@@ -138,14 +160,10 @@ def novonivel():
 			matriz_y = 6
 		if dificult >= 6.5:
 			dificult = 6.5
-		if pulobase >= 63:
-			pulobase = 63
+		if pulobase >= 58:
+			pulobase = 58
 		if reloadmonstro <= 0.9:
 			reloadmonstro = 0.9
-		if bal1 <= 1.05:
-			bal1 = 1.05
-		if bal2 <= 0.1:
-			bal2 = 0.1
 		if basenave >= 700:
 			basenave = 700
 		if enemybase >= 175:
@@ -186,6 +204,7 @@ def colisao():
 				if listatiros[tiro].collided(matriz[mxx][myy]):
 					matriz[mxx].remove(matriz[mxx][myy])
 					listatiros.remove(listatiros[tiro])
+					novonivel()
 					pontuacao()
 					return
 
@@ -207,7 +226,7 @@ def movenave():
 		if nave.x > 0:
 			nave.move_x(-vel_nave)
 
-	if delay * dificult >= 1: # teclado.key_pressed("SPACE") and
+	if teclado.key_pressed("SPACE") and delay * dificult >= 1:
 		novotiro_nave()
 		delay = 0
 
@@ -270,7 +289,6 @@ def desenhaenemy():
 def telajogo():
 	global gamestate, delay, listatiros, lose
 	if lose == 0:
-		novonivel()
 		fundo.draw()
 		movenave()
 		desenhatiro()
@@ -288,9 +306,32 @@ def telajogo():
 
 
 def teladificuldade():
-	global gamestate
+	global gamestate, GAMESPEED
 	fundo.draw()
-	janela.draw_text("ESSA EH A TELA DE DIFICULDADE", janela.width / 2 - 200, janela.height / 2, 40, (255, 255, 255))
+	easy.draw()
+	medium.draw()
+	hard.draw()
+
+	if mouse.is_over_object(easy):
+		easyhover.draw()
+		if mouse.is_button_pressed(1):
+			GAMESPEED = 1
+			gamestate = 0
+			return GAMESPEED
+
+	if mouse.is_over_object(medium):
+		mediumhover.draw()
+		if mouse.is_button_pressed(1):
+			GAMESPEED = 1.2
+			gamestate = 0
+			return GAMESPEED
+
+	if mouse.is_over_object(hard):
+		hardhover.draw()
+		if mouse.is_button_pressed(1):
+			GAMESPEED = 1.5
+			gamestate = 0
+			return GAMESPEED
 
 
 def telarank():
@@ -332,7 +373,7 @@ def menu():
 matrizmonstros(matriz_x, matriz_y)
 
 while True:
-
+	print(tempomonstro, reloadmonstro)
 	delay += janela.delta_time()
 	delayfps += janela.delta_time()
 	tempo += janela.delta_time()
@@ -345,7 +386,7 @@ while True:
 		janela.draw_text(str(fpsatual), 740, 3, size=12, color=(255, 255, 255), bold=True)
 		janela.draw_text('Pontuação: ' + str(pontos), 700, janela.height - 15, size=12, color=(255, 255, 255), bold=True)
 	if gamestate == 2:
-		teladificuldade()
+		GAMESPEED = teladificuldade()
 	if gamestate == 3:
 		telarank()
 	if gamestate == 4:
